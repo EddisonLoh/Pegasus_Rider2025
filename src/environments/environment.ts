@@ -19,7 +19,7 @@ export const environment = {
         android_channel_id: ''
     },
     serverUrl: "https://payment-service-pi.vercel.app/",
-    pushNotificationServerUrl: "localhost:3000", // Push notification backend server URL
+    pushNotificationServerUrl: "https://payment-service-pi.vercel.app/", // Push notification backend server URL
     CountryJson: [
         {
             "name": "Afghanistan",
