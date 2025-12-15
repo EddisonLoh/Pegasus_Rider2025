@@ -38,6 +38,11 @@ export class AppComponent {
     private translate: TranslateService,
     private oneSignalService: OnesignalService
   ) {
+    // Set default language immediately (synchronously) to prevent placeholder display
+    this.translate.setDefaultLang('en');
+    this.translate.use('en');
+    this.currentLanguage = 'en';
+    
     this.initializeApp();
     this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
@@ -47,8 +52,7 @@ export class AppComponent {
   }
 
   initializeApp() {
-    // Set default language
-    this.currentLanguage = this.translate.getDefaultLang() || 'en';
+    // Load user's saved language preference (if different from default)
     this.initializeTranslation();
     this.initialize();
     this.initializeOneSignal();
@@ -123,17 +127,15 @@ export class AppComponent {
   }
 
   async initializeTranslation() {
-    this.translate.setDefaultLang('en'); // Set English as default
-
     try {
       const { value } = await Preferences.get({ key: 'user-lang' });
-      const lang = value || 'en'; // Default to English
-      this.translate.use(lang);
-      this.currentLanguage = lang;
+      if (value && value !== this.currentLanguage) {
+        this.translate.use(value);
+        this.currentLanguage = value;
+      }
     } catch (error) {
       console.error('Error loading language preference:', error);
-      this.translate.use('en');
-      this.currentLanguage = 'en';
+      // Default language already set in constructor
     }
   }
 
