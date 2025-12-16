@@ -130,7 +130,13 @@
     "DISCOUNT_INCREASED": "Your discount increased!",
     "NEW_PASSENGER": "New passenger joined",
     "PASSENGER_LEFT": "A passenger left the ride",
-    "CALCULATING_ROUTE": "Calculating best route..."
+    "CALCULATING_ROUTE": "Calculating best route...",
+    "ROUTE_OPTIMIZED": "Route Optimized",
+    "DIRECT_DISTANCE": "Direct Distance",
+    "ACTUAL_ROUTE": "Actual Route",
+    "ESTIMATED_TIME": "Est. Time",
+    "MINUTES": "min",
+    "ROUTE_NOTE": "Route calculated using Dijkstra's algorithm for optimal path finding"
   },
   "FILE": "File",
   "UPLOAD_FAILED": "Upload failed",

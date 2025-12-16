@@ -102,12 +102,16 @@ export class DijkstraService {
         throw new Error('No route found');
       }
 
+      // Calculate straight-line (Haversine) distance for comparison
+      const directDistance = this.calculateHaversineDistance(origin, destination);
+
       const pathResult: PathResult = {
         nodes: route.nodes,
         coordinates: route.coordinates,
         totalWeight: route.duration, // seconds
         totalDistance: route.distance, // meters
-        encodedPolyline: route.encodedPolyline
+        encodedPolyline: route.encodedPolyline,
+        directDistance: directDistance
       };
 
       // Cache the result
@@ -183,6 +187,7 @@ export class DijkstraService {
       coordinates: [origin, destination],
       totalWeight: Math.round(duration),
       totalDistance: Math.round(distance),
+      directDistance: Math.round(distance)
     };
   }
 

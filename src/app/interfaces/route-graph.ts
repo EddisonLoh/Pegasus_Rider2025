@@ -26,6 +26,7 @@ export interface PathResult {
   totalWeight: number;       // Total travel time in seconds
   totalDistance: number;     // Total distance in meters
   encodedPolyline?: string;  // Google encoded polyline
+  directDistance?: number;   // Straight-line distance in meters (for comparison)
 }
 
 export interface RideCandidate {

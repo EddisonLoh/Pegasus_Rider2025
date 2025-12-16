@@ -164,6 +164,14 @@ export class HomePage implements AfterViewInit {
   isCalculatingRoute: boolean = false;
   nearbyRidersCount: number = 0;
 
+  // Route optimization display properties
+  routeOptimizationInfo: {
+    directDistance: number;      // Straight-line distance in meters
+    optimizedDistance: number;   // Actual route distance in meters
+    estimatedTime: number;       // Estimated time in seconds
+    isOptimized: boolean;        // Whether route was optimized using Dijkstra
+  } | null = null;
+
   // Add these stage constants at the class level
   private readonly STAGES = {
     BOOKING: 'booking',
@@ -3835,6 +3843,38 @@ async processBookAgainData(state) {
   }
 
   /**
+   * Get formatted route optimization info for display
+   * Shows how much distance was optimized using Dijkstra algorithm
+   */
+  getRouteOptimizationDisplay(): { 
+    directDistanceKm: string; 
+    optimizedDistanceKm: string;
+    differenceKm: string;
+    estimatedTimeMin: string;
+  } | null {
+    if (!this.routeOptimizationInfo) return null;
+    
+    const directKm = this.routeOptimizationInfo.directDistance / 1000;
+    const optimizedKm = this.routeOptimizationInfo.optimizedDistance / 1000;
+    const differenceKm = optimizedKm - directKm;
+    const timeMin = Math.round(this.routeOptimizationInfo.estimatedTime / 60);
+    
+    return {
+      directDistanceKm: directKm.toFixed(1),
+      optimizedDistanceKm: optimizedKm.toFixed(1),
+      differenceKm: differenceKm > 0 ? `+${differenceKm.toFixed(1)}` : differenceKm.toFixed(1),
+      estimatedTimeMin: `${timeMin}`
+    };
+  }
+
+  /**
+   * Check if route optimization info is available
+   */
+  hasRouteOptimizationInfo(): boolean {
+    return this.routeOptimizationInfo !== null && this.routeOptimizationInfo.isOptimized;
+  }
+
+  /**
    * Subscribe to shared ride updates when matched
    */
   subscribeToSharedRide(sharedRideId: string): void {
@@ -4052,6 +4092,17 @@ async processBookAgainData(state) {
       
       this.computedPath = await this.dijkstraService.findShortestPath(origin, destination);
       console.log('Computed path:', this.computedPath);
+
+      // Store route optimization info for UI display
+      if (this.computedPath) {
+        this.routeOptimizationInfo = {
+          directDistance: this.computedPath.directDistance || 0,
+          optimizedDistance: this.computedPath.totalDistance,
+          estimatedTime: this.computedPath.totalWeight,
+          isOptimized: true
+        };
+        console.log('Route optimization info:', this.routeOptimizationInfo);
+      }
 
       // 2. Find nearby active riders
       const nearbyCandidates = await this.nearbyRiderService.findNearbyActiveRiders(

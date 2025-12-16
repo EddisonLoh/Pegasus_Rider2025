@@ -219,6 +219,32 @@
               <ion-spinner name="dots" color="primary"></ion-spinner>
               <span>{{ 'SHARED_RIDE.CALCULATING_ROUTE' | translate }}</span>
             </div>
+
+            <!-- Route optimization info display -->
+            <div class="route-optimization-info" *ngIf="sharedRideEnabled && hasRouteOptimizationInfo() && !isCalculatingRoute">
+              <div class="optimization-header">
+                <ion-icon name="analytics-outline" color="primary"></ion-icon>
+                <span class="optimization-title">{{ 'SHARED_RIDE.ROUTE_OPTIMIZED' | translate }}</span>
+              </div>
+              <div class="optimization-details">
+                <div class="optimization-stat">
+                  <span class="stat-label">{{ 'SHARED_RIDE.DIRECT_DISTANCE' | translate }}</span>
+                  <span class="stat-value">{{ getRouteOptimizationDisplay()?.directDistanceKm }} km</span>
+                </div>
+                <div class="optimization-stat">
+                  <span class="stat-label">{{ 'SHARED_RIDE.ACTUAL_ROUTE' | translate }}</span>
+                  <span class="stat-value highlight">{{ getRouteOptimizationDisplay()?.optimizedDistanceKm }} km</span>
+                </div>
+                <div class="optimization-stat">
+                  <span class="stat-label">{{ 'SHARED_RIDE.ESTIMATED_TIME' | translate }}</span>
+                  <span class="stat-value">{{ getRouteOptimizationDisplay()?.estimatedTimeMin }} {{ 'SHARED_RIDE.MINUTES' | translate }}</span>
+                </div>
+              </div>
+              <div class="optimization-note">
+                <ion-icon name="information-circle-outline" color="medium"></ion-icon>
+                <span>{{ 'SHARED_RIDE.ROUTE_NOTE' | translate }}</span>
+              </div>
+            </div>
             
             <!-- Nearby riders banner -->
             <div class="nearby-riders-banner" *ngIf="sharedRideEnabled && nearbyRidersCount > 0 && !isCalculatingRoute" (click)="viewSharedRides()">

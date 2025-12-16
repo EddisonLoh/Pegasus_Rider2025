@@ -1032,6 +1032,88 @@ ion-footer .bottomItems.shadow-top[ngIf="confirmStage"] {
       height: 20px;
     }
   }
+
+  // Route optimization info display
+  .route-optimization-info {
+    margin-top: 10px;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(var(--ion-color-primary-rgb), 0.08) 0%, rgba(var(--ion-color-primary-rgb), 0.03) 100%);
+    border-radius: 10px;
+    border: 1px solid rgba(var(--ion-color-primary-rgb), 0.15);
+
+    .optimization-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+
+      ion-icon {
+        font-size: 20px;
+      }
+
+      .optimization-title {
+        font-size: 0.95em;
+        font-weight: 600;
+        color: var(--ion-color-primary);
+      }
+    }
+
+    .optimization-details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+
+      .optimization-stat {
+        flex: 1;
+        min-width: 80px;
+        padding: 8px 10px;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 8px;
+        text-align: center;
+
+        .stat-label {
+          display: block;
+          font-size: 0.7em;
+          color: var(--ion-color-medium);
+          margin-bottom: 2px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+          display: block;
+          font-size: 1em;
+          font-weight: 600;
+          color: var(--ion-text-color);
+
+          &.highlight {
+            color: var(--ion-color-primary);
+          }
+        }
+      }
+    }
+
+    .optimization-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(var(--ion-color-primary-rgb), 0.1);
+
+      ion-icon {
+        font-size: 14px;
+        margin-top: 1px;
+        flex-shrink: 0;
+      }
+
+      span {
+        font-size: 0.75em;
+        color: var(--ion-color-medium);
+        line-height: 1.4;
+      }
+    }
+  }
   
   // Nearby riders banner
   .nearby-riders-banner {

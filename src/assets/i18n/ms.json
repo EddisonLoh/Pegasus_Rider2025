@@ -134,7 +134,13 @@
     "DISCOUNT_INCREASED": "Diskaun anda meningkat!",
     "NEW_PASSENGER": "Penumpang baru menyertai",
     "PASSENGER_LEFT": "Seorang penumpang meninggalkan perjalanan",
-    "CALCULATING_ROUTE": "Mengira laluan terbaik..."
+    "CALCULATING_ROUTE": "Mengira laluan terbaik...",
+    "ROUTE_OPTIMIZED": "Laluan Dioptimumkan",
+    "DIRECT_DISTANCE": "Jarak Terus",
+    "ACTUAL_ROUTE": "Laluan Sebenar",
+    "ESTIMATED_TIME": "Anggaran Masa",
+    "MINUTES": "min",
+    "ROUTE_NOTE": "Laluan dikira menggunakan algoritma Dijkstra untuk pencarian laluan optimum"
   },
   "FILE": "Fail",
   "UPLOAD_FAILED": "Muat naik gagal",
