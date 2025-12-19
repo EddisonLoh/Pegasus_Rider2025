@@ -10,6 +10,30 @@ import {
   ScoredMatch,
   HeapNode
 } from '../interfaces/route-graph';
+import * as polyline from '@mapbox/polyline';
+
+/**
+ * API Request/Response interfaces
+ */
+interface WeightConfig {
+  distance?: number;
+  time?: number;
+  traffic?: number;
+}
+
+interface RouteApiRequest {
+  start: LatLng;
+  end: LatLng;
+  weightConfig?: WeightConfig;
+  timeout?: number;
+}
+
+interface RouteApiResponse {
+  polyline: string;
+  distance: number;
+  duration: number;
+  instructions?: any[];
+}
 
 /**
  * MinHeap implementation for Dijkstra's priority queue
@@ -78,13 +102,14 @@ export class DijkstraService {
   // Earth radius in meters for Haversine calculation
   private readonly EARTH_RADIUS_M = 6371000;
 
+  private readonly API_URL = 'https://asia-southeast1-dijkstra-routing-demo-se-f3d91.cloudfunctions.net/computeRoute';
+
   constructor(private http: HttpClient) {}
 
   /**
-   * Calculate shortest path using Google Directions API and build graph
-   * This creates a simplified graph from the route waypoints
+   * Calculate shortest path using the Dijkstra Routing API
    */
-  async findShortestPath(origin: LatLng, destination: LatLng): Promise<PathResult> {
+  async findShortestPath(origin: LatLng, destination: LatLng, weightConfig?: WeightConfig): Promise<PathResult> {
     const cacheKey = this.getCacheKey(origin, destination);
     
     // Check cache first
@@ -95,23 +120,19 @@ export class DijkstraService {
     }
 
     try {
-      // Use Google Directions API to get the route
-      const route = await this.getGoogleDirectionsRoute(origin, destination);
+      // Call the Dijkstra Routing API
+      const route = await this.getDijkstraRoute(origin, destination, weightConfig);
       
       if (!route) {
         throw new Error('No route found');
       }
-
-      // Calculate straight-line (Haversine) distance for comparison
-      const directDistance = this.calculateHaversineDistance(origin, destination);
 
       const pathResult: PathResult = {
         nodes: route.nodes,
         coordinates: route.coordinates,
         totalWeight: route.duration, // seconds
         totalDistance: route.distance, // meters
-        encodedPolyline: route.encodedPolyline,
-        directDistance: directDistance
+        encodedPolyline: route.encodedPolyline
       };
 
       // Cache the result
@@ -127,51 +148,46 @@ export class DijkstraService {
   }
 
   /**
-   * Get route from Google Directions API
+   * Get route from Dijkstra Routing API
    */
-  private async getGoogleDirectionsRoute(origin: LatLng, destination: LatLng): Promise<{
+  private async getDijkstraRoute(origin: LatLng, destination: LatLng, weightConfig?: WeightConfig): Promise<{
     nodes: string[];
     coordinates: LatLng[];
     duration: number;
     distance: number;
     encodedPolyline: string;
   } | null> {
-    return new Promise((resolve, reject) => {
-      const directionsService = new google.maps.DirectionsService();
-      
-      directionsService.route({
-        origin: new google.maps.LatLng(origin.lat, origin.lng),
-        destination: new google.maps.LatLng(destination.lat, destination.lng),
-        travelMode: google.maps.TravelMode.DRIVING,
-        optimizeWaypoints: true
-      }, (result, status) => {
-        if (status === google.maps.DirectionsStatus.OK && result) {
-          const route = result.routes[0];
-          const leg = route.legs[0];
-          
-          // Extract coordinates from the path
-          const coordinates: LatLng[] = [];
-          const nodes: string[] = [];
-          
-          route.overview_path.forEach((point, index) => {
-            const coord: LatLng = { lat: point.lat(), lng: point.lng() };
-            coordinates.push(coord);
-            nodes.push(`node_${index}`);
-          });
+    const request: RouteApiRequest = {
+      start: origin,
+      end: destination,
+      weightConfig: weightConfig || { distance: 1, time: 0.5 } // Default weights
+    };
 
-          resolve({
-            nodes,
-            coordinates,
-            duration: leg.duration?.value || 0,
-            distance: leg.distance?.value || 0,
-            encodedPolyline: route.overview_polyline
-          });
-        } else {
-          console.error('Directions request failed:', status);
-          resolve(null);
-        }
-      });
-    });
+    try {
+      const response = await this.http.post<RouteApiResponse>(this.API_URL, request).toPromise();
+      
+      if (!response || !response.polyline) {
+        return null;
+      }
+
+      // Decode the polyline to get coordinates
+      const decodedCoords: [number, number][] = polyline.decode(response.polyline);
+      const coordinates: LatLng[] = decodedCoords.map(([lat, lng]) => ({ lat, lng }));
+      
+      // Create node IDs for each coordinate
+      const nodes: string[] = coordinates.map((_, index) => `node_${index}`);
+
+      return {
+        nodes,
+        coordinates,
+        duration: response.duration,
+        distance: response.distance,
+        encodedPolyline: response.polyline
+      };
+    } catch (error) {
+      console.error('API call failed:', error);
+      return null;
+    }
   }
 
   /**
@@ -187,7 +203,6 @@ export class DijkstraService {
       coordinates: [origin, destination],
       totalWeight: Math.round(duration),
       totalDistance: Math.round(distance),
-      directDistance: Math.round(distance)
     };
   }
 

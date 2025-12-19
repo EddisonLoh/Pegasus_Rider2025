@@ -164,14 +164,6 @@ export class HomePage implements AfterViewInit {
   isCalculatingRoute: boolean = false;
   nearbyRidersCount: number = 0;
 
-  // Route optimization display properties
-  routeOptimizationInfo: {
-    directDistance: number;      // Straight-line distance in meters
-    optimizedDistance: number;   // Actual route distance in meters
-    estimatedTime: number;       // Estimated time in seconds
-    isOptimized: boolean;        // Whether route was optimized using Dijkstra
-  } | null = null;
-
   // Add these stage constants at the class level
   private readonly STAGES = {
     BOOKING: 'booking',
@@ -2697,38 +2689,31 @@ async getDistanceAndDirections() {
       return;
     }
 
-    const origin1 = new google.maps.LatLng(this.LatLng.lat, this.LatLng.lng);
-    const origin2 = new google.maps.LatLng(this.D_LatLng.lat, this.D_LatLng.lng);
-
-    const request = {
-      origin: origin1,
-      destination: origin2,
-      travelMode: google.maps.TravelMode.DRIVING,
-    };
-
-    this.geocode.directions.route(request, async (response, status) => {
-      if (status === 'OK') {
-        this.direction = response;
-        this.distance = response.routes[0].legs[0].distance.value;
-        this.bounds = response.routes[0].bounds;
+    // Use Dijkstra service instead of Google Directions
+    try {
+      const pathResult = await this.dijkstraService.findShortestPath(this.LatLng, this.D_LatLng);
+      
+      if (pathResult) {
+        this.direction = pathResult; // Store for compatibility
+        this.distance = pathResult.totalDistance;
+        this.bounds = null; // Not needed for Dijkstra
         this.price = await this.database.getPriceEstimate(this.distance);
-        this.duration = response.routes[0].legs[0].duration.text;
+        this.duration = Math.round(pathResult.totalWeight / 60) + ' mins'; // Convert to minutes string
 
-        // Extract the actual route path from directions response
-        const routePath = response.routes[0].overview_path.map(latlng => ({
-          lat: latlng.lat(),
-          lng: latlng.lng()
-        }));
+        // Extract route path
+        const routePath = pathResult.coordinates;
 
         await this.createAndAddMarkers(this.LatLng, this.D_LatLng, routePath);
 
         // Call getDistanceAndDirectionsDriver after this part is successful
         await this.getDistanceAndDirectionsDriver();
       } else {
-        console.error('Direction ERROR:', response);
-        this.overlay.showAlert('Check Your Network', JSON.stringify(response));
+        throw new Error('No route found');
       }
-    });
+    } catch (error) {
+      console.error('Dijkstra route error:', error);
+      this.overlay.showAlert('Route Error', 'Unable to calculate route. Please try again.');
+    }
   } else {
     this.overlay.showAlert('Drag Map', 'Drag the map and stop on your required destination');
     console.error('D_LatLng or D_LatLng.lat is undefined');
@@ -3798,6 +3783,50 @@ async processBookAgainData(state) {
   }
 }
 
+  /**
+   * Draw route using Dijkstra API
+   */
+  async drawRoute() {
+    if (!this.LatLng || !this.D_LatLng) {
+      console.error('Cannot draw route: missing start or destination');
+      return;
+    }
+
+    try {
+      console.log('Drawing route from', this.LatLng, 'to', this.D_LatLng);
+      
+      // Use Dijkstra service to get route
+      const pathResult = await this.dijkstraService.findShortestPath(this.LatLng, this.D_LatLng);
+      
+      if (!pathResult) {
+        console.error('No route found');
+        this.overlay.showAlert('Route Error', 'Unable to calculate route. Please try again.');
+        return;
+      }
+
+      // Store route data
+      this.distance = pathResult.totalDistance;
+      this.duration = Math.round(pathResult.totalWeight / 60); // Convert seconds to minutes
+      this.routePath = pathResult.coordinates;
+      
+      // Calculate price
+      this.price = await this.database.getPriceEstimate(this.distance);
+      
+      // Create markers and polyline
+      await this.createAndAddMarkers(this.LatLng, this.D_LatLng, pathResult.coordinates);
+      
+      console.log('Route drawn successfully:', {
+        distance: this.distance,
+        duration: this.duration,
+        price: this.price
+      });
+      
+    } catch (error) {
+      console.error('Error drawing route:', error);
+      this.overlay.showAlert('Route Error', 'Failed to calculate route. Please check your connection and try again.');
+    }
+  }
+
   // ==================== SHARED RIDE METHODS ====================
 
   /**
@@ -3840,38 +3869,6 @@ async processBookAgainData(state) {
       min: this.price * 0.60,  // 40% discount
       max: this.price * 0.90   // 10% discount
     };
-  }
-
-  /**
-   * Get formatted route optimization info for display
-   * Shows how much distance was optimized using Dijkstra algorithm
-   */
-  getRouteOptimizationDisplay(): { 
-    directDistanceKm: string; 
-    optimizedDistanceKm: string;
-    differenceKm: string;
-    estimatedTimeMin: string;
-  } | null {
-    if (!this.routeOptimizationInfo) return null;
-    
-    const directKm = this.routeOptimizationInfo.directDistance / 1000;
-    const optimizedKm = this.routeOptimizationInfo.optimizedDistance / 1000;
-    const differenceKm = optimizedKm - directKm;
-    const timeMin = Math.round(this.routeOptimizationInfo.estimatedTime / 60);
-    
-    return {
-      directDistanceKm: directKm.toFixed(1),
-      optimizedDistanceKm: optimizedKm.toFixed(1),
-      differenceKm: differenceKm > 0 ? `+${differenceKm.toFixed(1)}` : differenceKm.toFixed(1),
-      estimatedTimeMin: `${timeMin}`
-    };
-  }
-
-  /**
-   * Check if route optimization info is available
-   */
-  hasRouteOptimizationInfo(): boolean {
-    return this.routeOptimizationInfo !== null && this.routeOptimizationInfo.isOptimized;
   }
 
   /**
@@ -4092,17 +4089,6 @@ async processBookAgainData(state) {
       
       this.computedPath = await this.dijkstraService.findShortestPath(origin, destination);
       console.log('Computed path:', this.computedPath);
-
-      // Store route optimization info for UI display
-      if (this.computedPath) {
-        this.routeOptimizationInfo = {
-          directDistance: this.computedPath.directDistance || 0,
-          optimizedDistance: this.computedPath.totalDistance,
-          estimatedTime: this.computedPath.totalWeight,
-          isOptimized: true
-        };
-        console.log('Route optimization info:', this.routeOptimizationInfo);
-      }
 
       // 2. Find nearby active riders
       const nearbyCandidates = await this.nearbyRiderService.findNearbyActiveRiders(
